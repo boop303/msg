@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Anonymous Chat</title>
+  <style>
+    /* Reset and base */
+    * {
+      margin: 0; padding: 0; box-sizing: border-box;
+    }
+    html, body {
+      height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #121212;
+      color: #e0e0e0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+      font-size: 14px;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile */
+      padding: 0; margin: 0;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile */
+      max-width: 900px;
+      margin: 0 auto;
+      background: #1e1e1e;
+      border-radius: 0;
+      box-shadow: none;
+      color: #ccc;
+      overflow: hidden;
+      user-select: none;
+    }
+    /* Hide heading and extra text */
+    .header, .setup-section h2, .setup-section p {
+      display: none;
+    }
+    /* Setup section styles simplified */
+    .setup-section {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile */
+      padding: 10px;
+      background: #1e1e1e;
+      user-select: text;
+    }
+    .input-group {
+      width: 100%;
+      max-width: 320px;
+      margin-bottom: 15px;
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: block;
+      color: #bbb;
+      font-size: 13px;
+      user-select: text;
+    }
+    .room-code-input {
+      width: 100%;
+      padding: 10px 15px;
+      font-size: 14px;
+      border-radius: 20px;
+      border: 1.5px solid #444;
+      background: #222;
+      color: #ddd;
+      outline: none;
+      transition: border-color 0.2s ease;
+      user-select: text;
+    }
+    .room-code-input:focus {
+      border-color: #555;
+    }
+    .btn {
+      width: 100%;
+      max-width: 320px;
+      padding: 12px 0;
+      margin: 5px 0;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 20px;
+      border: none;
+      cursor: pointer;
+      background: #333;
+      color: #eee;
+      transition: background-color 0.2s ease;
+      user-select: none;
+    }
+    .btn:hover {
+      background: #444;
+    }
+    .btn.secondary {
+      background: #555;
+    }
+    .btn.secondary:hover {
+      background: #666;
+    }
+    /* Chat area fills entire container */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh; /* Dynamic viewport height for mobile */
+      padding: 0;
+      background: #121212;
+      color: #ddd;
+      user-select: text;
+    }
+    /* Room info top bar */
+    .room-info {
+      display: flex;
+      align-items: center;
+      height: 42px;
+      padding: 0 10px;
+      background: #222;
+      border-bottom: 1px solid #333;
+      color: #888;
+      font-size: 13px;
+      user-select: text;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .room-code {
+      font-family: monospace;
+      font-size: 14px;
+      color: #bbb;
+      background: #1a1a1a;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      user-select: text;
+      cursor: default;
+    }
+    .room-info-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .room-info button {
+      background: #333;
+      color: #ddd;
+      font-size: 13px;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .room-info button:hover {
+      background: #444;
+    }
+    .room-info button.danger {
+      background: #550000;
+      color: #f2a1a1;
+    }
+    .room-info button.danger:hover {
+      background: #770000;
+    }
+    /* Messages container */
+    .messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      padding: 10px 12px 10px 12px;
+      background: #121212;
+      font-size: 13px;
+      line-height: 1.3;
+      user-select: text;
+      display: flex;
+      flex-direction: column;
+      /* Ensure messages don't overlap with input */
+      margin-bottom: 0;
+      min-height: 0; /* Important for flexbox scrolling */
+    }
+    .status {
+      text-align: center;
+      font-style: italic;
+      color: #666;
+      padding: 8px 0;
+      user-select: none;
+      font-size: 12px;
+    }
+    .message {
+      max-width: 75%;
+      margin: 6px 0;
+      padding: 8px 14px;
+      border-radius: 16px;
+      word-wrap: break-word;
+      font-weight: 400;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+    .message.own {
+      align-self: flex-end;
+      background: #3a2a72;
+      color: #eee;
+    }
+    .message.other {
+      align-self: flex-start;
+      background: #292929;
+      color: #ccc;
+      border-left: 3px solid #555;
+    }
+    .timestamp {
+      font-size: 10px;
+      opacity: 0.5;
+      margin-top: 4px;
+      font-style: italic;
+      color: #999;
+      user-select: none;
+    }
+    /* Image previews in messages */
+    .image-preview {
+      max-width: 180px;
+      max-height: 180px;
+      border-radius: 12px;
+      margin-top: 6px;
+      cursor: pointer;
+      border: 1px solid #444;
+      display: block;
+    }
+    /* Message form fixed bottom - KEY FIX */
+    .message-form {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      background: #222;
+      border-top: 1px solid #333;
+      flex-shrink: 0;
+      user-select: none;
+      /* Remove sticky positioning that was causing issues */
+      position: relative;
+      bottom: 0;
+      z-index: 10;
+      width: 100%;
+    }
+    .message-input {
+      flex-grow: 1;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 16px;
+      border: 1.5px solid #444;
+      background: #121212;
+      color: #ddd;
+      font-size: 13px;
+      outline: none;
+      caret-color: #a2a2f7;
+      user-select: text;
+      transition: border-color 0.2s ease;
+      /* Prevent zoom on iOS */
+      -webkit-text-size-adjust: 100%;
+      transform-origin: left top;
+    }
+    .message-input::placeholder {
+      color: #666;
+    }
+    .message-input:focus {
+      border-color: #6666aa;
+      /* Prevent zoom on focus for iOS */
+      -webkit-transform: scale(1);
+      transform: scale(1);
+    }
+    .file-input {
+      display: none;
+    }
+    .file-btn {
+      background: none;
+      border: none;
+      color: #bbb;
+      font-size: 18px;
+      cursor: pointer;
+      margin-right: 6px;
+      user-select: none;
+      transition: color 0.15s ease;
+      /* Ensure button doesn't shrink */
+      flex-shrink: 0;
+    }
+    .file-btn:hover {
+      color: #ddd;
+    }
+    .btn-send {
+      background: #444;
+      border: none;
+      color: #ddd;
+      padding: 8px 14px;
+      font-size: 13px;
+      border-radius: 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease;
+      margin-left: 6px;
+      /* Ensure button doesn't shrink */
+      flex-shrink: 0;
+    }
+    .btn-send:hover {
+      background: #555;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 10px 18px;
+      border-radius: 18px;
+      background: #03dac6;
+      color: #121212;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+      z-index: 1000;
+      user-select: none;
+    }
+    .notification.error {
+      background: #bb5555;
+      color: #eee;
+    }
+    /* Scrollbar styling for webkit */
+    .messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .messages::-webkit-scrollbar-track {
+      background: #121212;
+    }
+    .messages::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 3px;
+    }
+    /* Enhanced mobile fixes */
+    @media (max-width: 480px) {
+      .container {
+        width: 100vw;
+        width: 100dvw; /* Dynamic viewport width */
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height */
+        border-radius: 0;
+        /* Fallback for browsers that don't support dvh */
+        min-height: 100vh;
+        max-height: 100vh;
+      }
+      .setup-section {
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height */
+        min-height: 100vh;
+      }
+      .chat-area {
+        height: 100vh;
+        height: 100dvh; /* Dynamic viewport height */
+        min-height: 100vh;
+        /* Force proper layout in Brave */
+        position: relative;
+      }
+      .room-code-input {
+        max-width: 100%;
+        /* Prevent zoom on iOS */
+        font-size: 16px;
+      }
+      .btn {
+        max-width: 100%;
+        padding: 10px 0;
+        font-size: 13px;
+      }
+      .room-info button {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      .room-code {
+        font-size: 12px;
+        padding: 3px 6px;
+      }
+      .message-input {
+        /* Prevent zoom on iOS - font-size must be 16px or larger */
+        font-size: 16px;
+        height: 36px;
+      }
+      .btn-send {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+      .file-btn {
+        font-size: 16px;
+        margin-right: 4px;
+      }
+      .message {
+        font-size: 12px;
+      }
+      .message-form {
+        /* Increase height on mobile for better touch targets */
+        height: 52px;
+        padding: 0 6px;
+        /* Additional fixes for Brave browser */
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        z-index: 100;
+      }
+      /* Adjust messages container to account for fixed input */
+      .messages {
+        padding-bottom: 60px; /* Add space for fixed input */
+      }
+      /* Ensure the input area stays at bottom on mobile keyboards */
+      .chat-area {
+        position: relative;
+      }
+    }
+    /* iOS Safari specific fixes */
+    @supports (-webkit-touch-callout: none) {
+      .container {
+        height: -webkit-fill-available;
+        min-height: -webkit-fill-available;
+      }
+      .setup-section {
+        height: -webkit-fill-available;
+        min-height: -webkit-fill-available;
+      }
+      .chat-area {
+        height: -webkit-fill-available;
+        min-height: -webkit-fill-available;
+      }
+    }
+    
+    /* Brave browser specific fixes */
+    @media screen and (-webkit-min-device-pixel-ratio: 0) {
+      @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+        .container {
+          height: 100vh !important;
+          min-height: 100vh;
+        }
+        .chat-area {
+          height: 100vh !important;
+          min-height: 100vh;
+        }
+        @media (max-width: 480px) {
+          .message-form {
+            position: fixed !important;
+            bottom: 0 !important;
+          }
+        }
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Setup Section -->
+    <div class="setup-section room-setup" id="roomSetup">
+      <div class="input-group">
+        <label for="roomCode">Room Code</label>
+        <input type="text" id="roomCode" class="room-code-input" placeholder="Enter or generate room code" autocomplete="off" />
+      </div>
+      <button class="btn" onclick="joinRoom()">Join Room</button>
+      <button class="btn secondary" onclick="generateRoomCode()">Generate Room</button>
+    </div>
+    <!-- Chat Area -->
+    <div class="chat-area" id="chatArea" style="display:none;">
+      <div class="room-info">
+        <span class="room-code" id="currentRoom"></span>
+        <div class="room-info-buttons">
+          <span id="userCount" style="color: #888; font-size: 12px; margin-right: 10px;">👥 0 online</span>
+          <button class="danger" onclick="leaveRoom()">⬅ Leave</button>
+        </div>
+      </div>
+      <div class="messages" id="messages">
+        <div class="status">Loading messages...</div>
+      </div>
+      <div class="message-form">
+        <input type="file" class="file-input" id="fileInput" accept="*/*" />
+        <button class="file-btn" title="Attach File" onclick="document.getElementById('fileInput').click()">📎</button>
+        <input type="text" id="messageInput" class="message-input" placeholder="Type message..." maxlength="500" autocomplete="off" />
+        <button class="btn-send" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="notification" id="notification"></div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
+
+  <script>
+    var firebaseConfig = {
+      apiKey: "AIzaSyBhpJ1yAo92xLx6L3GyTVTuZsOXYYDZKWs",
+      authDomain: "anon-ac806.firebaseapp.com",
+      databaseURL: "https://anon-ac806-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "anon-ac806",
+      storageBucket: "anon-ac806.appspot.com",
+      messagingSenderId: "692292101984",
+      appId: "1:692292101984:web:15ad6efcd0bc1411982005",
+      measurementId: "G-1888WQV1PV"
+    };
+    var app = firebase.initializeApp(firebaseConfig);
+    var database = firebase.database();
+
+    let currentRoom = '';
+    let userId = 'anon_' + Math.random().toString(36).substr(2, 12);
+    let messagesRef = null;
+    let usersRef = null;
+    let userPresenceRef = null;
+    let heartbeatInterval = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const savedRoom = localStorage.getItem('chatRoom');
+      if (savedRoom) {
+        document.getElementById('roomCode').value = savedRoom;
+        joinRoom(true);
+      }
+      document.getElementById('roomCode').addEventListener('keypress', function(e) {
+        if(e.key === 'Enter') joinRoom();
+      });
+      document.getElementById('messageInput').addEventListener('keypress', function(e) {
+        if(e.key === 'Enter') sendMessage();
+      });
+      
+      // Mobile keyboard handling
+      const messageInput = document.getElementById('messageInput');
+      const chatArea = document.getElementById('chatArea');
+      
+      messageInput.addEventListener('focus', function() {
+        // Small delay to ensure keyboard is shown
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300);
+      });
+      
+      // Handle viewport changes (keyboard show/hide)
+      let initialViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      
+      function handleViewportChange() {
+        if (window.visualViewport) {
+          const currentHeight = window.visualViewport.height;
+          const heightDiff = initialViewportHeight - currentHeight;
+          
+          // If keyboard is likely open (height decreased significantly)
+          if (heightDiff > 150) {
+            document.body.style.height = currentHeight + 'px';
+          } else {
+            document.body.style.height = '100vh';
+          }
+        }
+      }
+      
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+      }
+      
+      // Fallback for older mobile browsers
+      window.addEventListener('resize', function() {
+        setTimeout(scrollToBottom, 100);
+      });
+    });
+
+    function generateRoomCode() {
+      const code = 'ROOM-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      document.getElementById('roomCode').value = code;
+      showNotification('Room code generated');
+    }
+
+    function joinRoom(auto = false) {
+      const code = document.getElementById('roomCode').value.trim();
+      if (!code) {
+        showNotification('Please enter a room code', 'error');
+        return;
+      }
+      currentRoom = code;
+      localStorage.setItem('chatRoom', currentRoom);
+      document.getElementById('currentRoom').textContent = currentRoom;
+      messagesRef = database.ref('rooms/' + currentRoom + '/messages');
+      usersRef = database.ref('rooms/' + currentRoom + '/users');
+      
+      // Set up user presence
+      userPresenceRef = usersRef.child(userId);
+      userPresenceRef.set({
+        name: userId.substr(5, 4),
+        lastSeen: firebase.database.ServerValue.TIMESTAMP,
+        online: true
+      });
+      
+      // Set up auto-disconnect on browser close
+      userPresenceRef.onDisconnect().update({
+        online: false,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+      });
+      
+      // Start heartbeat to maintain presence
+      startHeartbeat();
+      
+      document.querySelector('.room-setup').style.display = 'none';
+      document.getElementById('chatArea').style.display = 'flex';
+      listenForMessages();
+      listenForUsers();
+      
+      if (!auto) {
+        sendSystemMessage(userId.substr(5, 4) + ' joined');
+        showNotification('Joined room');
+      }
+      // Ensure proper scrolling after joining
+      setTimeout(scrollToBottom, 100);
+    }
+
+    function listenForMessages() {
+      if (!messagesRef) return;
+      messagesRef.off();
+      const container = document.getElementById('messages');
+      container.innerHTML = '';
+      messagesRef.on('child_added', snapshot => {
+        displayMessage(snapshot.val());
+      });
+    }
+
+    function listenForUsers() {
+      if (!usersRef) return;
+      
+      usersRef.on('value', snapshot => {
+        const users = snapshot.val();
+        let onlineCount = 0;
+        
+        if (users) {
+          // Count online users and clean up offline users older than 30 seconds
+          const now = Date.now();
+          Object.keys(users).forEach(userIdKey => {
+            const user = users[userIdKey];
+            if (user.online) {
+              onlineCount++;
+            } else if (user.lastSeen && (now - user.lastSeen > 30000)) {
+              // Remove user if offline for more than 30 seconds
+              usersRef.child(userIdKey).remove();
+            }
+          });
+        }
+        
+        // Update user count display
+        const userCountEl = document.getElementById('userCount');
+        userCountEl.textContent = `👥 ${onlineCount} online`;
+      });
+    }
+
+    function startHeartbeat() {
+      // Clear any existing heartbeat
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      
+      // Send heartbeat every 10 seconds
+      heartbeatInterval = setInterval(() => {
+        if (userPresenceRef) {
+          userPresenceRef.update({
+            lastSeen: firebase.database.ServerValue.TIMESTAMP,
+            online: true
+          });
+        }
+      }, 10000);
+    }
+
+    function stopHeartbeat() {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text || !messagesRef) return;
+      const message = {
+        id: Date.now() + '_' + Math.random(),
+        text: text,
+        sender: userId,
+        senderName: userId.substr(5, 4),
+        timestamp: Date.now(),
+        type: 'text'
+      };
+      messagesRef.push(message).then(() => {
+        input.value = '';
+        // Ensure scroll after sending message
+        setTimeout(scrollToBottom, 50);
+      }).catch(() => showNotification('Error sending message', 'error'));
+    }
+
+    function sendSystemMessage(text) {
+      if (!messagesRef) return;
+      messagesRef.push({
+        id: Date.now() + '_sys',
+        text: text,
+        sender: 'system',
+        senderName: 'sys',
+        timestamp: Date.now(),
+        type: 'system'
+      });
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        showNotification('File too large (max 50MB)', 'error');
+        e.target.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const message = {
+          id: Date.now() + '_' + Math.random(),
+          text: file.name,
+          fileData: evt.target.result,
+          fileType: file.type,
+          sender: userId,
+          senderName: userId.substr(5, 4),
+          timestamp: Date.now(),
+          type: 'file',
+        };
+        messagesRef.push(message).then(() => {
+          showNotification('File sent');
+          e.target.value = '';
+          setTimeout(scrollToBottom, 50);
+        }).catch(() => {
+          showNotification('Error sending file', 'error');
+          e.target.value = '';
+        });
+      }
+      reader.readAsDataURL(file);
+    });
+
+    function displayMessage(msg) {
+      const container = document.getElementById('messages');
+      if (msg.type === 'system') {
+        const div = document.createElement('div');
+        div.className = 'status';
+        div.textContent = msg.text;
+        container.appendChild(div);
+        scrollToBottom();
+        return;
+      }
+      const div = document.createElement('div');
+      div.className = 'message ' + (msg.sender === userId ? 'own' : 'other');
+      const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      let html = `<div><strong>${msg.sender === userId ? 'You' : msg.senderName}</strong></div>`;
+      if (msg.type === 'file') {
+        if (msg.fileType && msg.fileType.startsWith('image/')) {
+          html += `<div>📷 ${msg.text}</div><img src="${msg.fileData}" alt="${msg.text}" class="image-preview" onclick="window.open(this.src)"/>`;
+        } else {
+          html += `<div>📎 <a href="${msg.fileData}" download="${msg.text}" style="color:#ccc;">${msg.text}</a></div>`;
+        }
+      } else {
+        // Make links clickable in text messages
+        const linkifiedText = linkifyText(msg.text);
+        html += `<div>${linkifiedText}</div>`;
+      }
+      html += `<div class="timestamp">${time}</div>`;
+      div.innerHTML = html;
+      container.appendChild(div);
+      scrollToBottom();
+    }
+
+    // Function to detect and make links clickable
+    function linkifyText(text) {
+      // Regular expression to detect URLs
+      const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[^\s]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?)/gi;
+      
+      return text.replace(urlRegex, function(url) {
+        let href = url;
+        let displayUrl = url;
+        
+        // Add protocol if missing
+        if (!url.match(/^https?:\/\//i)) {
+          if (url.match(/^www\./i)) {
+            href = 'https://' + url;
+          } else if (url.match(/\.[a-zA-Z]{2,}/)) {
+            // Check if it looks like a domain
+            href = 'https://' + url;
+          } else {
+            return url; // Not a valid URL
+          }
+        }
+        
+        // Truncate very long URLs for display
+        if (displayUrl.length > 50) {
+          displayUrl = displayUrl.substring(0, 47) + '...';
+        }
+        
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #6fa8dc; text-decoration: underline; word-break: break-all;">${displayUrl}</a>`;
+      });
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('messages');
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+
+    function copyRoomCode() {
+      if (!currentRoom) return;
+      navigator.clipboard.writeText(currentRoom).then(() => {
+        showNotification('Copied');
+      });
+    }
+
+    function leaveRoom() {
+      if (messagesRef) {
+        sendSystemMessage(userId.substr(5,4) + ' left');
+        messagesRef.off();
+      }
+      
+      // Clean up user presence
+      if (userPresenceRef) {
+        userPresenceRef.update({
+          online: false,
+          lastSeen: firebase.database.ServerValue.TIMESTAMP
+        });
+        userPresenceRef = null;
+      }
+      
+      if (usersRef) {
+        usersRef.off();
+        usersRef = null;
+      }
+      
+      stopHeartbeat();
+      localStorage.removeItem('chatRoom');
+      currentRoom = '';
+      messagesRef = null;
+      document.getElementById('chatArea').style.display = 'none';
+      document.querySelector('.room-setup').style.display = 'flex';
+      document.getElementById('messages').innerHTML = '<div class="status">Loading messages...</div>';
+      document.getElementById('roomCode').value = '';
+      document.getElementById('userCount').textContent = '👥 0 online';
+      showNotification('Left room');
+    }
+
+    function showNotification(text, type='success') {
+      const noti = document.getElementById('notification');
+      noti.textContent = text;
+      noti.className = 'notification' + (type === 'error' ? ' error' : '');
+      noti.style.display = 'block';
+      clearTimeout(noti._timeout);
+      noti._timeout = setTimeout(() => noti.style.display = 'none', 3000);
+    }
+
+    // Enhanced browser close/tab close detection
+    window.addEventListener('beforeunload', (e) => {
+      if (messagesRef && currentRoom && userPresenceRef) {
+        // Mark user as offline immediately
+        userPresenceRef.update({
+          online: false,
+          lastSeen: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        sendSystemMessage(userId.substr(5,4) + ' left');
+        stopHeartbeat();
+      }
+    });
+
+    // Handle page visibility changes (tab switching, minimizing)
+    document.addEventListener('visibilitychange', () => {
+      if (userPresenceRef) {
+        if (document.hidden) {
+          // User switched tab or minimized - reduce heartbeat frequency
+          stopHeartbeat();
+          // Set up slower heartbeat for background tabs
+          heartbeatInterval = setInterval(() => {
+            if (userPresenceRef) {
+              userPresenceRef.update({
+                lastSeen: firebase.database.ServerValue.TIMESTAMP,
+                online: true
+              });
+            }
+          }, 30000); // Every 30 seconds when tab is hidden
+        } else {
+          // User returned to tab - resume normal heartbeat
+          startHeartbeat();
+        }
+      }
+    });
+
+    // Handle focus/blur events for additional presence accuracy
+    window.addEventListener('focus', () => {
+      if (userPresenceRef) {
+        userPresenceRef.update({
+          lastSeen: firebase.database.ServerValue.TIMESTAMP,
+          online: true
+        });
+        startHeartbeat();
+      }
+    });
+
+    window.addEventListener('blur', () => {
+      if (userPresenceRef) {
+        stopHeartbeat();
+        // Set slower heartbeat when window loses focus
+        heartbeatInterval = setInterval(() => {
+          if (userPresenceRef) {
+            userPresenceRef.update({
+              lastSeen: firebase.database.ServerValue.TIMESTAMP,
+              online: true
+            });
+          }
+        }, 25000);
+      }
+    });
+  </script>
+</body>
+</html>
