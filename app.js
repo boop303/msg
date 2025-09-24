@@ -1,7 +1,7 @@
 function validateDomain() {
   const allowedDomains = [
     'boop303.github.io',    
-    'your-custom-domain.com', 
+    'https://boop303.github.io/msg/', 
     'localhost',               
     '127.0.0.1'
   
