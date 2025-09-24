@@ -86,10 +86,6 @@ if (!firebaseConfig) {
   var database = firebase.database();
 }
 
-// ==============================================
-// APPLICATION VARIABLES
-// ==============================================
-
 let currentRoom = '';
 let userId = 'anon_' + Math.random().toString(36).substr(2, 12);
 let messagesRef = null;
@@ -97,28 +93,14 @@ let usersRef = null;
 let userPresenceRef = null;
 let heartbeatInterval = null;
 let isAdmin = false;
-
-// ==============================================
-// SECURE ADMIN AUTHENTICATION
-// ==============================================
-
 function validateAdminKey(key) {
   if (!key || key.length < 6) return false;
   if (!validateDomain()) return false;
-  
-  // STEP 2: GENERATE YOUR ADMIN PASSWORD HASH
-  // Go to browser console and run: generatePasswordHash("YourSecretPassword")
-  // Replace the hash below with the output
-  const expectedHash = '1335e4e1'; // 🔴 CHANGE THIS: Hash of your admin password
+  const expectedHash = '6c7d96fc';
   
   const inputHash = generatePasswordHash(key);
   return inputHash === expectedHash;
 }
-
-// ==============================================
-// INITIALIZATION AND EVENT LISTENERS
-// ==============================================
-
 document.addEventListener('DOMContentLoaded', function () {
   // Check for saved room
   const savedRoom = localStorage.getItem('chatRoom');
@@ -144,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if(e.key === 'Enter') sendMessage();
   });
   
-  // Mobile keyboard handling
   const messageInput = document.getElementById('messageInput');
   
   messageInput.addEventListener('focus', function() {
@@ -153,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 300);
   });
   
-  // Handle viewport changes (keyboard show/hide)
   let initialViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   
   function handleViewportChange() {
