@@ -1,15 +1,9 @@
-// ==============================================
-// SECURE CONFIGURATION SYSTEM - MAXIMUM SECURITY
-// ==============================================
-
 function validateDomain() {
-  // STEP 1: REPLACE WITH YOUR ACTUAL DOMAINS
   const allowedDomains = [
-    'your-username.github.io',    // 🔴 CHANGE THIS: Your GitHub Pages domain
-    'your-custom-domain.com',     // 🔴 CHANGE THIS: Your custom domain (if any)
-    'localhost',                  // For local testing
-    '127.0.0.1'                  // For local testing
-  ];
+    'boop303.github.io',    
+    'your-custom-domain.com', 
+    'localhost',               
+    '127.0.0.1'
   
   const currentDomain = window.location.hostname.toLowerCase();
   const isAllowed = allowedDomains.some(domain => 
