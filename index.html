@@ -2,81 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Anonymous Chat</title>
-  <link rel="stylesheet" href="style.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Setup Section -->
-    <div class="setup-section room-setup" id="roomSetup">
-      <!-- Admin Login (Hidden by default) -->
-      <div class="input-group" id="adminSection" style="display: none;">
-        <label for="adminKey">Admin Access</label>
-        <input type="password" id="adminKey" class="room-code-input" placeholder="Enter admin key" autocomplete="off" />
-        <button class="btn secondary" onclick="checkAdminAccess()" style="margin-bottom: 15px;">Login as Admin</button>
-      </div>
-      
-      <!-- Regular User Interface -->
-      <div id="userInterface">
-        <div class="input-group">
-          <label for="roomCode">Room Code</label>
-          <input type="text" id="roomCode" class="room-code-input" placeholder="Enter room code to join" autocomplete="off" />
+  <div class="app-container">
+    <div class="setup-screen" id="setupScreen">
+      <div class="setup-card">
+        <div class="mb-3">
+          <label class="form-label text-secondary">Room Code</label>
+          <input type="text" id="roomCode" class="form-control room-code-input" placeholder="Enter room code" autocomplete="off">
         </div>
-        <button class="btn" onclick="joinRoom()">Join Room</button>
-        <button class="btn secondary" onclick="showAdminLogin()" style="font-size: 12px; margin-top: 10px;">Admin Access</button>
-      </div>
-      
-      <!-- Admin Interface (Hidden by default) -->
-      <div id="adminInterface" style="display: none;">
-        <div style="text-align: center; margin-bottom: 20px; color: #4CAF50;">
-          <span style="font-size: 14px; font-weight: bold;">🔑 Admin Mode Active</span>
-        </div>
-        <div class="input-group">
-          <label for="adminRoomCode">Create New Room</label>
-          <input type="text" id="adminRoomCode" class="room-code-input" placeholder="Enter custom room code or generate" autocomplete="off" />
-        </div>
-        <button class="btn" onclick="createRoom()">Create Room</button>
-        <button class="btn secondary" onclick="generateRoomCode()">Generate Code</button>
-        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #444;">
-          <div class="input-group">
-            <label for="joinRoomCode">Or Join Existing Room</label>
-            <input type="text" id="joinRoomCode" class="room-code-input" placeholder="Enter room code to join" autocomplete="off" />
-          </div>
-          <button class="btn" onclick="joinExistingRoom()">Join Room</button>
-        </div>
-        <button class="btn secondary" onclick="logoutAdmin()" style="background: #666; margin-top: 15px;">Logout Admin</button>
+        <button class="btn btn-join" onclick="joinRoom()">Join Room</button>
       </div>
     </div>
-    
-    <!-- Chat Area -->
-    <div class="chat-area" id="chatArea" style="display:none;">
-      <div class="room-info">
-        <span class="room-code" id="currentRoom"></span>
-        <div class="room-info-buttons">
-          <span id="userCount" style="color: #888; font-size: 12px; margin-right: 10px;">👥 0 online</span>
-          <button class="danger" onclick="leaveRoom()">⬅ Leave</button>
+
+    <div class="chat-container d-none" id="chatScreen">
+      <div class="chat-header d-flex justify-content-between align-items-center">
+        <span class="room-badge" id="currentRoom"></span>
+        <div class="d-flex align-items-center gap-2">
+          <span class="user-count" id="userCount">👥 0 online</span>
+          <button class="btn btn-leave btn-sm" onclick="leaveRoom()">← Leave</button>
         </div>
       </div>
-      <div class="messages" id="messages">
-        <div class="status">Loading messages...</div>
+
+      <div class="messages-container" id="messagesContainer">
+        <div class="status-msg">Loading messages...</div>
       </div>
-      <div class="message-form">
-        <input type="file" class="file-input" id="fileInput" accept="*/*" />
-        <button class="file-btn" title="Attach File" onclick="document.getElementById('fileInput').click()">📎</button>
-        <input type="text" id="messageInput" class="message-input" placeholder="Type message..." maxlength="500" autocomplete="off" />
-        <button class="btn-send" onclick="sendMessage()">Send</button>
+
+      <div class="message-footer">
+        <div class="d-flex align-items-center gap-2">
+          <input type="file" id="fileInput" class="d-none" accept="*/*">
+          <button class="btn-attach" onclick="document.getElementById('fileInput').click()">📎</button>
+          <button class="btn-attach" id="audioBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
+          <input type="text" id="messageInput" class="form-control message-input" placeholder="Type message..." maxlength="500" autocomplete="off">
+          <button class="btn btn-send" onclick="sendMessage()">➤</button>
+        </div>
+        <div id="recordingIndicator" class="recording-indicator d-none">
+          <span class="recording-dot"></span> Recording...
+        </div>
       </div>
+
+      <div class="bottom-spacer"></div>
     </div>
   </div>
 
-  <div class="notification" id="notification"></div>
+  <div class="media-modal" id="mediaModal" onclick="if(event.target === this) closeMediaModal()">
+    <button class="media-modal-close" onclick="closeMediaModal()">×</button>
+    <a id="downloadBtn" class="media-download-btn" download>⬇</a>
+    <div id="mediaModalContent"></div>
+  </div>
 
-  <!-- Firebase SDK -->
+  <div class="toast-notification" id="toastNotification"></div>
+
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
-  
-  <!-- Application Script -->
   <script src="script.js"></script>
 </body>
 </html>
