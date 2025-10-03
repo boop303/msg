@@ -314,6 +314,100 @@
       max-height: 90%;
       object-fit: contain;
     }
+    
+    .audio-modal {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.98);
+      z-index: 9999;
+      padding: 20px;
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      animation: slideUp 0.3s ease-out;
+    }
+    
+    .audio-modal.active {
+      display: block;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+    
+    .audio-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    
+    .audio-modal-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .audio-modal-close-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: #fff;
+      font-size: 24px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .audio-modal-close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .audio-modal-player {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    .audio-modal-player audio {
+      width: 100%;
+      outline: none;
+    }
+    
+    .audio-modal-actions {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .audio-action-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .audio-action-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
     .media-modal-close {
       position: absolute;
       top: 20px;
@@ -413,7 +507,7 @@
         <div class="d-flex align-items-center gap-2">
           <input type="file" id="fileInput" class="d-none" accept="*/*">
           <button class="btn-attach" onclick="document.getElementById('fileInput').click()">📎</button>
-          <button class="btn-attach" id="audioBtn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">🎤</button>
+          <button class="btn-attach" id="audioBtn">🎤</button>
           <input type="text" id="messageInput" class="form-control message-input" placeholder="Type message..." maxlength="500" autocomplete="off">
           <button class="btn btn-send" onclick="sendMessage()">➤</button>
         </div>
@@ -430,6 +524,21 @@
     <button class="media-modal-close" onclick="closeMediaModal()">×</button>
     <a id="downloadBtn" class="media-download-btn" download>⬇</a>
     <div id="mediaModalContent"></div>
+  </div>
+  
+  <div class="audio-modal" id="audioModal">
+    <div class="audio-modal-header">
+      <div class="audio-modal-title">🎤 Voice Message</div>
+      <button class="audio-modal-close-btn" onclick="closeAudioModal()">×</button>
+    </div>
+    <div class="audio-modal-player">
+      <audio id="audioModalPlayer" controls></audio>
+    </div>
+    <div class="audio-modal-actions">
+      <a id="audioDownloadBtn" class="audio-action-btn" download>
+        ⬇ Download
+      </a>
+    </div>
   </div>
 
   <div class="toast-notification" id="toastNotification"></div>
@@ -472,6 +581,21 @@
       });
 
       document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+      
+      const audioBtn = document.getElementById('audioBtn');
+      audioBtn.addEventListener('mousedown', startRecording);
+      audioBtn.addEventListener('mouseup', stopRecording);
+      audioBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        startRecording();
+      });
+      audioBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        stopRecording();
+      });
+      audioBtn.addEventListener('mouseleave', () => {
+        if (isRecording) stopRecording();
+      });
     });
 
     function joinRoom() {
@@ -663,7 +787,9 @@
         
         mediaRecorder.start();
         isRecording = true;
-        document.getElementById('audioBtn').classList.add('recording');
+        const audioBtn = document.getElementById('audioBtn');
+        audioBtn.textContent = '⏹️';
+        audioBtn.classList.add('recording');
         document.getElementById('recordingIndicator').classList.remove('d-none');
       } catch (err) {
         showNotification('Microphone access denied', 'error');
@@ -675,7 +801,9 @@
       
       mediaRecorder.stop();
       isRecording = false;
-      document.getElementById('audioBtn').classList.remove('recording');
+      const audioBtn = document.getElementById('audioBtn');
+      audioBtn.textContent = '🎤';
+      audioBtn.classList.remove('recording');
       document.getElementById('recordingIndicator').classList.add('d-none');
     }
 
@@ -760,6 +888,11 @@
     }
 
     function openMediaModal(src, type, name, audioId) {
+      if (type === 'audio') {
+        openAudioModal(src, name);
+        return;
+      }
+      
       const modal = document.getElementById('mediaModal');
       const content = document.getElementById('mediaModalContent');
       const downloadBtn = document.getElementById('downloadBtn');
@@ -784,41 +917,35 @@
         video.style.height = 'auto';
         content.appendChild(video);
         downloadBtn.style.display = 'flex';
-      } else if (type === 'audio') {
-        const audioContainer = document.createElement('div');
-        audioContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 20px;';
-        
-        const audio = document.createElement('audio');
-        audio.id = 'modalAudio';
-        audio.src = src;
-        audio.controls = true;
-        audio.style.cssText = 'width: 100%; max-width: 500px;';
-        
-        audioContainer.appendChild(audio);
-        content.appendChild(audioContainer);
-        
-        if (audioId) {
-          const originalAudio = document.getElementById(audioId);
-          if (originalAudio) {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaElementSource(originalAudio);
-            const destination = audioContext.createMediaStreamDestination();
-            
-            source.connect(destination);
-            source.connect(audioContext.destination);
-            
-            const pitchShiftAmount = Math.pow(2, 14 / 12);
-            originalAudio.playbackRate = pitchShiftAmount;
-            originalAudio.preservesPitch = false;
-            audio.playbackRate = pitchShiftAmount;
-            audio.preservesPitch = false;
-          }
-        }
-        
-        downloadBtn.style.display = 'flex';
       }
       
       modal.classList.add('active');
+    }
+    
+    function openAudioModal(src, name) {
+      const modal = document.getElementById('audioModal');
+      const player = document.getElementById('audioModalPlayer');
+      const downloadBtn = document.getElementById('audioDownloadBtn');
+      
+      player.src = src;
+      const pitchShiftAmount = Math.pow(2, 14 / 12);
+      player.playbackRate = pitchShiftAmount;
+      player.preservesPitch = false;
+      
+      downloadBtn.href = src;
+      downloadBtn.download = name || 'voice-message.webm';
+      
+      modal.classList.add('active');
+    }
+    
+    function closeAudioModal() {
+      const modal = document.getElementById('audioModal');
+      const player = document.getElementById('audioModalPlayer');
+      
+      player.pause();
+      player.src = '';
+      
+      modal.classList.remove('active');
     }
 
     function closeMediaModal() {
