@@ -315,22 +315,44 @@
       object-fit: contain;
     }
     
-    .audio-modal {
+    .bottom-sheet-modal {
       display: none;
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
-      background: rgba(0, 0, 0, 0.98);
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.5);
       z-index: 9999;
-      padding: 20px;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .bottom-sheet-modal.active {
+      display: block;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    .bottom-sheet-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 90vh;
+      background: #1a1a1a;
       border-top-left-radius: 20px;
       border-top-right-radius: 20px;
       animation: slideUp 0.3s ease-out;
-    }
-    
-    .audio-modal.active {
-      display: block;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     
     @keyframes slideUp {
@@ -342,21 +364,26 @@
       }
     }
     
-    .audio-modal-header {
+    .bottom-sheet-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #333;
       color: #fff;
+      flex-shrink: 0;
     }
     
-    .audio-modal-title {
+    .bottom-sheet-title {
       font-size: 16px;
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
-    .audio-modal-close-btn {
-      background: rgba(255, 255, 255, 0.2);
+    .bottom-sheet-close-btn {
+      background: rgba(255, 255, 255, 0.1);
       border: none;
       color: #fff;
       font-size: 24px;
@@ -367,32 +394,61 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: background 0.2s;
     }
     
-    .audio-modal-close-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
+    .bottom-sheet-close-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
     
-    .audio-modal-player {
+    .bottom-sheet-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .bottom-sheet-media {
       width: 100%;
-      max-width: 600px;
+      max-width: 800px;
       margin: 0 auto;
     }
     
-    .audio-modal-player audio {
+    .bottom-sheet-media img {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      max-height: 70vh;
+      object-fit: contain;
+    }
+    
+    .bottom-sheet-media video {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      max-height: 70vh;
+      outline: none;
+    }
+    
+    .bottom-sheet-media audio {
       width: 100%;
       outline: none;
     }
     
-    .audio-modal-actions {
+    .bottom-sheet-actions {
       display: flex;
       justify-content: center;
       gap: 15px;
-      margin-top: 20px;
+      padding: 20px;
+      border-top: 1px solid #333;
+      flex-shrink: 0;
     }
     
-    .audio-action-btn {
-      background: rgba(255, 255, 255, 0.15);
+    .bottom-sheet-action-btn {
+      background: rgba(255, 255, 255, 0.1);
       border: none;
       color: #fff;
       padding: 12px 24px;
@@ -403,10 +459,12 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      text-decoration: none;
     }
     
-    .audio-action-btn:hover {
-      background: rgba(255, 255, 255, 0.25);
+    .bottom-sheet-action-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: #fff;
     }
     .media-modal-close {
       position: absolute;
@@ -520,24 +578,16 @@
     </div>
   </div>
 
-  <div class="media-modal" id="mediaModal" onclick="if(event.target === this) closeMediaModal()">
-    <button class="media-modal-close" onclick="closeMediaModal()">×</button>
-    <a id="downloadBtn" class="media-download-btn" download>⬇</a>
-    <div id="mediaModalContent"></div>
-  </div>
-  
-  <div class="audio-modal" id="audioModal">
-    <div class="audio-modal-header">
-      <div class="audio-modal-title">🎤 Voice Message</div>
-      <button class="audio-modal-close-btn" onclick="closeAudioModal()">×</button>
-    </div>
-    <div class="audio-modal-player">
-      <audio id="audioModalPlayer" controls></audio>
-    </div>
-    <div class="audio-modal-actions">
-      <a id="audioDownloadBtn" class="audio-action-btn" download>
-        ⬇ Download
-      </a>
+  <div class="bottom-sheet-modal" id="mediaBottomSheet" onclick="if(event.target === this) closeBottomSheet()">
+    <div class="bottom-sheet-content">
+      <div class="bottom-sheet-header">
+        <div class="bottom-sheet-title" id="bottomSheetTitle">Media</div>
+        <button class="bottom-sheet-close-btn" onclick="closeBottomSheet()">×</button>
+      </div>
+      <div class="bottom-sheet-body">
+        <div class="bottom-sheet-media" id="bottomSheetMedia"></div>
+      </div>
+      <div class="bottom-sheet-actions" id="bottomSheetActions"></div>
     </div>
   </div>
 
@@ -888,77 +938,70 @@
     }
 
     function openMediaModal(src, type, name, audioId) {
-      if (type === 'audio') {
-        openAudioModal(src, name);
-        return;
-      }
+      const modal = document.getElementById('mediaBottomSheet');
+      const title = document.getElementById('bottomSheetTitle');
+      const mediaContainer = document.getElementById('bottomSheetMedia');
+      const actionsContainer = document.getElementById('bottomSheetActions');
       
-      const modal = document.getElementById('mediaModal');
-      const content = document.getElementById('mediaModalContent');
-      const downloadBtn = document.getElementById('downloadBtn');
-      content.innerHTML = '';
-      
-      downloadBtn.href = src;
-      downloadBtn.download = name || 'download';
+      mediaContainer.innerHTML = '';
+      actionsContainer.innerHTML = '';
       
       if (type === 'image') {
+        title.innerHTML = '🖼️ Image';
         const img = document.createElement('img');
         img.src = src;
-        img.alt = name;
-        img.className = 'media-modal-content';
-        content.appendChild(img);
-        downloadBtn.style.display = 'flex';
+        img.alt = name || 'Image';
+        mediaContainer.appendChild(img);
+        
+        actionsContainer.innerHTML = `
+          <a href="${src}" download="${name || 'image'}" class="bottom-sheet-action-btn">
+            ⬇ Download
+          </a>
+        `;
       } else if (type === 'video') {
+        title.innerHTML = '🎥 Video';
         const video = document.createElement('video');
         video.src = src;
         video.controls = true;
-        video.className = 'media-modal-content';
-        video.style.width = '100%';
-        video.style.height = 'auto';
-        content.appendChild(video);
-        downloadBtn.style.display = 'flex';
+        mediaContainer.appendChild(video);
+        
+        actionsContainer.innerHTML = `
+          <a href="${src}" download="${name || 'video'}" class="bottom-sheet-action-btn">
+            ⬇ Download
+          </a>
+        `;
+      } else if (type === 'audio') {
+        title.innerHTML = '🎤 Voice Message';
+        const audio = document.createElement('audio');
+        audio.src = src;
+        audio.controls = true;
+        mediaContainer.appendChild(audio);
+        
+        actionsContainer.innerHTML = `
+          <a href="${src}" download="${name || 'voice-message.webm'}" class="bottom-sheet-action-btn">
+            ⬇ Download
+          </a>
+        `;
       }
       
       modal.classList.add('active');
     }
     
-    function openAudioModal(src, name) {
-      const modal = document.getElementById('audioModal');
-      const player = document.getElementById('audioModalPlayer');
-      const downloadBtn = document.getElementById('audioDownloadBtn');
+    function closeBottomSheet() {
+      const modal = document.getElementById('mediaBottomSheet');
+      const mediaContainer = document.getElementById('bottomSheetMedia');
       
-      player.src = src;
-      const pitchShiftAmount = Math.pow(2, 14 / 12);
-      player.playbackRate = pitchShiftAmount;
-      player.preservesPitch = false;
-      
-      downloadBtn.href = src;
-      downloadBtn.download = name || 'voice-message.webm';
-      
-      modal.classList.add('active');
-    }
-    
-    function closeAudioModal() {
-      const modal = document.getElementById('audioModal');
-      const player = document.getElementById('audioModalPlayer');
-      
-      player.pause();
-      player.src = '';
-      
-      modal.classList.remove('active');
-    }
-
-    function closeMediaModal() {
-      const modal = document.getElementById('mediaModal');
-      const content = document.getElementById('mediaModalContent');
-      
-      const video = content.querySelector('video');
-      const audio = content.querySelector('audio');
+      const video = mediaContainer.querySelector('video');
+      const audio = mediaContainer.querySelector('audio');
       if (video) video.pause();
       if (audio) audio.pause();
       
       modal.classList.remove('active');
-      content.innerHTML = '';
+      mediaContainer.innerHTML = '';
+    }
+
+    function closeMediaModal() {
+      closeBottomSheet();
     }
 
     function scrollToBottom() {
