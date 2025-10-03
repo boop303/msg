@@ -709,8 +709,7 @@
           html += `<div>📎 <a href="${msg.fileData}" download="${msg.text}" style="color:#6fa8dc;">${msg.text}</a></div>`;
         }
       } else if (msg.type === 'audio') {
-        html += `<div style="margin-top: 5px;">🎤 Voice Message</div>`;
-        html += `<audio controls style="max-width: 200px; margin-top: 8px;"><source src="${msg.fileData}" type="${msg.fileType}"></audio>`;
+        html += `<div style="margin-top: 5px; cursor: pointer;" onclick="openMediaModal('${msg.fileData}', 'audio', '${msg.text}')">🎤</div>`;
       } else {
         const linkifiedText = linkifyText(msg.text);
         html += `<div>${linkifiedText}</div>`;
