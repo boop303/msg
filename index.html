@@ -879,12 +879,25 @@
       let html = `<strong>${msg.sender === userId ? 'You' : msg.senderName}</strong>`;
       
       if (msg.type === 'file') {
-        if (msg.fileType && msg.fileType.startsWith('image/')) {
+        const isImage = msg.fileType && (
+          msg.fileType.startsWith('image/') ||
+          /\.(jpg|jpeg|png|gif|bmp|webp|svg|ico|tiff|tif|heic|heif|avif|jfif)$/i.test(msg.text)
+        );
+        const isVideo = msg.fileType && (
+          msg.fileType.startsWith('video/') ||
+          /\.(mp4|webm|ogg|ogv|mov|avi|wmv|flv|mkv|m4v|3gp|mpeg|mpg|m2v|mts|m2ts|vob|ts)$/i.test(msg.text)
+        );
+        const isAudio = msg.fileType && (
+          msg.fileType.startsWith('audio/') ||
+          /\.(mp3|wav|ogg|oga|m4a|aac|flac|opus|weba|aiff|ape|wv|tta|tak)$/i.test(msg.text)
+        );
+        
+        if (isImage) {
           html += `<img src="${msg.fileData}" alt="Image" class="image-preview" onclick="openMediaModal('${msg.fileData}', 'image', '${msg.text}')"/>`;
-        } else if (msg.fileType && msg.fileType.startsWith('video/')) {
-          html += `<video class="image-preview" onclick="openMediaModal('${msg.fileData}', 'video', '${msg.text}')"><source src="${msg.fileData}" type="${msg.fileType}"></video>`;
-        } else if (msg.fileType && msg.fileType.startsWith('audio/')) {
-          html += `<audio controls style="max-width: 200px; margin-top: 8px;"><source src="${msg.fileData}" type="${msg.fileType}"></audio>`;
+        } else if (isVideo) {
+          html += `<video class="image-preview" onclick="openMediaModal('${msg.fileData}', 'video', '${msg.text}')"><source src="${msg.fileData}" type="${msg.fileType || 'video/mp4'}"></video>`;
+        } else if (isAudio) {
+          html += `<audio controls style="max-width: 200px; margin-top: 8px;"><source src="${msg.fileData}" type="${msg.fileType || 'audio/mpeg'}"></audio>`;
         } else {
           html += `<div>📎 <a href="${msg.fileData}" download="${msg.text}" style="color:#6fa8dc;">${msg.text}</a></div>`;
         }
@@ -963,6 +976,34 @@
         const video = document.createElement('video');
         video.src = src;
         video.controls = true;
+        video.setAttribute('controlsList', 'nodownload');
+        
+        const extension = name ? name.split('.').pop().toLowerCase() : '';
+        const mimeTypes = {
+          'mp4': 'video/mp4',
+          'webm': 'video/webm',
+          'ogg': 'video/ogg',
+          'ogv': 'video/ogg',
+          'mov': 'video/quicktime',
+          'avi': 'video/x-msvideo',
+          'wmv': 'video/x-ms-wmv',
+          'flv': 'video/x-flv',
+          'mkv': 'video/x-matroska',
+          'm4v': 'video/x-m4v',
+          '3gp': 'video/3gpp',
+          'mpeg': 'video/mpeg',
+          'mpg': 'video/mpeg',
+          'm2v': 'video/mpeg',
+          'ts': 'video/mp2t'
+        };
+        
+        if (extension && mimeTypes[extension]) {
+          const source = document.createElement('source');
+          source.src = src;
+          source.type = mimeTypes[extension];
+          video.appendChild(source);
+        }
+        
         mediaContainer.appendChild(video);
         
         actionsContainer.innerHTML = `
@@ -975,6 +1016,30 @@
         const audio = document.createElement('audio');
         audio.src = src;
         audio.controls = true;
+        
+        const extension = name ? name.split('.').pop().toLowerCase() : '';
+        const mimeTypes = {
+          'mp3': 'audio/mpeg',
+          'wav': 'audio/wav',
+          'ogg': 'audio/ogg',
+          'oga': 'audio/ogg',
+          'm4a': 'audio/mp4',
+          'aac': 'audio/aac',
+          'flac': 'audio/flac',
+          'opus': 'audio/opus',
+          'webm': 'audio/webm',
+          'weba': 'audio/webm',
+          'aiff': 'audio/aiff',
+          'aif': 'audio/aiff'
+        };
+        
+        if (extension && mimeTypes[extension]) {
+          const source = document.createElement('source');
+          source.src = src;
+          source.type = mimeTypes[extension];
+          audio.appendChild(source);
+        }
+        
         mediaContainer.appendChild(audio);
         
         actionsContainer.innerHTML = `
