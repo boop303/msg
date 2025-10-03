@@ -635,6 +635,7 @@
           const reader = new FileReader();
           
           reader.onload = function(evt) {
+            const audioId = 'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             const message = {
               id: Date.now() + '_' + Math.random(),
               text: 'Voice Message',
@@ -644,6 +645,7 @@
               senderName: userId.substr(5, 4),
               timestamp: Date.now(),
               type: 'audio',
+              audioId: audioId
             };
             
             messagesRef.push(message).then(() => {
@@ -709,7 +711,9 @@
           html += `<div>📎 <a href="${msg.fileData}" download="${msg.text}" style="color:#6fa8dc;">${msg.text}</a></div>`;
         }
       } else if (msg.type === 'audio') {
-        html += `<div style="margin-top: 5px; cursor: pointer;" onclick="openMediaModal('${msg.fileData}', 'audio', '${msg.text}')">🎤</div>`;
+        const audioId = msg.audioId || 'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        html += `<div style="margin-top: 5px; cursor: pointer; font-size: 24px;" onclick="openMediaModal('${msg.fileData}', 'audio', '${msg.text}', '${audioId}')">🎤</div>`;
+        html += `<audio id="${audioId}" style="display: none;" preload="auto"><source src="${msg.fileData}" type="${msg.fileType}"></audio>`;
       } else {
         const linkifiedText = linkifyText(msg.text);
         html += `<div>${linkifiedText}</div>`;
@@ -755,7 +759,7 @@
       });
     }
 
-    function openMediaModal(src, type, name) {
+    function openMediaModal(src, type, name, audioId) {
       const modal = document.getElementById('mediaModal');
       const content = document.getElementById('mediaModalContent');
       const downloadBtn = document.getElementById('downloadBtn');
@@ -781,12 +785,36 @@
         content.appendChild(video);
         downloadBtn.style.display = 'flex';
       } else if (type === 'audio') {
+        const audioContainer = document.createElement('div');
+        audioContainer.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 20px;';
+        
         const audio = document.createElement('audio');
+        audio.id = 'modalAudio';
         audio.src = src;
         audio.controls = true;
-        audio.style.width = '100%';
-        audio.style.maxWidth = '500px';
-        content.appendChild(audio);
+        audio.style.cssText = 'width: 100%; max-width: 500px;';
+        
+        audioContainer.appendChild(audio);
+        content.appendChild(audioContainer);
+        
+        if (audioId) {
+          const originalAudio = document.getElementById(audioId);
+          if (originalAudio) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(originalAudio);
+            const destination = audioContext.createMediaStreamDestination();
+            
+            source.connect(destination);
+            source.connect(audioContext.destination);
+            
+            const pitchShiftAmount = Math.pow(2, 14 / 12);
+            originalAudio.playbackRate = pitchShiftAmount;
+            originalAudio.preservesPitch = false;
+            audio.playbackRate = pitchShiftAmount;
+            audio.preservesPitch = false;
+          }
+        }
+        
         downloadBtn.style.display = 'flex';
       }
       
